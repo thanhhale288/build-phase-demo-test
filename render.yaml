@@ -1,0 +1,17 @@
+# Render Blueprint: deploys the SmartWO prototype as a static site
+services:
+  - type: web
+    name: smartwo-prototype
+    runtime: static
+    rootDir: Prototype/app
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

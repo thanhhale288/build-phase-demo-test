@@ -3,6 +3,7 @@
 !/.gitignore
 !/Prototype/
 !/.cursor/
+!/render.yaml
 node_modules/
 dist/
 dist-ssr/
