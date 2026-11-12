@@ -1,0 +1,20 @@
+/* SmartWO design tokens — industrial light, no AI slop */
+:root {
+  --color-bg: #ffffff;
+  --color-panel: #f8f9fa;
+  --color-border: #dfe2e6;
+  --color-text: #1f2328;
+  --color-text-muted: #656d76;
+  --color-pass: #198754;
+  --color-fail: #dc3545;
+  --color-pending: #f59e0b;
+  --color-action: #0d47a1;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius: 6px;
+  --header-h: 52px;
+}

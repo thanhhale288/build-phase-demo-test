@@ -1,0 +1,7 @@
+
+.page { max-width: 960px; }
+.lede { color: var(--color-text-muted); margin: 8px 0 16px; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { border-bottom: 1px solid var(--color-border); padding: 8px 6px; text-align: left; vertical-align: top; }
+.table th { color: var(--color-text-muted); font-weight: 600; }
+.mono { font-variant-numeric: tabular-nums; }

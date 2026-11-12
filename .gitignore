@@ -1,0 +1,13 @@
+# Only publish the prototype and Cursor skills; everything else stays local
+/*
+!/.gitignore
+!/Prototype/
+!/.cursor/
+node_modules/
+dist/
+dist-ssr/
+*.log
+Prototype/logs/
+.DS_Store
+*.local
+.env*

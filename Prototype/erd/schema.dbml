@@ -1,0 +1,126 @@
+// MFG-08 SmartWO — DBML mô phỏng (PostgreSQL)
+// Nguồn: Prototype/plan/02-ERD-spec.md. Chín bảng, không thêm cột.
+// work_orders.state không có pending_confirm.
+// predecessor_wo_id: [Đề xuất – nhóm chưa chốt]
+// materials.reserved tăng lúc Duyệt thành công: [Quyết định nhóm đang chờ chốt]
+// Seed máy: M1 UP rảnh; M2 DOWN; M3 MAINTENANCE; M4 UP chiếm bởi WO-11.
+// SOP không có FK tới sku_master (quan hệ ERD là logic qua target_sku_or_process).
+// machines.current_wo_id không phải FK trong spec mục 2.3.
+
+Project smartwo {
+  database_type: 'PostgreSQL'
+  Note: '''
+  DDL mô phỏng MFG-08 SmartWO.
+  predecessor_wo_id là đề xuất chưa chốt.
+  Tăng reserved lúc Duyệt là quyết định chờ chốt.
+  Máy M1–M4; WO-11 trên M4.
+  Không có state pending_confirm trên work_orders.
+  '''
+}
+
+Table sku_master {
+  sku varchar(32) [pk, note: 'Mã sản phẩm / SKU. Ví dụ mô phỏng P-100, P-200']
+  name varchar(128) [not null, note: 'Tên sản phẩm mô phỏng']
+  current_bom_rev varchar(8) [not null, note: 'Phiên bản BOM hiện hành. Cổng 4 so với work_orders.bom_rev']
+
+  Note: 'Danh mục thành phẩm mô phỏng.'
+}
+
+Table materials {
+  material_code varchar(32) [pk, note: 'Mã vật tư. Ví dụ mô phỏng BLT-1, HSG-1, QC-9']
+  name varchar(128) [not null, note: 'Tên chi tiết linh kiện']
+  on_hand int [not null, note: 'Tồn kho vật lý. CHECK (on_hand >= 0)']
+  reserved int [not null, default: 0, note: 'CHECK (reserved >= 0). [Quyết định nhóm đang chờ chốt] Tăng qty_required dòng critical khi Duyệt thành công. Không tăng lúc check, lúc tạo phiếu, hay duyệt fail/stale.']
+  qc_hold boolean [not null, default: false, note: 'TRUE thì không tính vào tồn khả dụng (Cổng 1)']
+  unit varchar(16) [not null, note: 'Đơn vị tính (cái, bộ, thanh)']
+
+  Note: 'Tồn khả dụng Cổng 1 = on_hand - reserved, và qc_hold = false.'
+}
+
+Table machines {
+  machine_id varchar(32) [pk, note: 'Mã máy. Seed mô phỏng M1, M2, M3, M4']
+  name varchar(64) [not null, note: 'M1 Bàn gá chính C1; M2 Máy hàn bấm viền; M3 Máy siết bu-lông tự động; M4 Bàn gá phụ C2']
+  status varchar(16) [not null, note: 'CHECK (status IN (UP, DOWN, MAINTENANCE)). Cổng 2 cần UP']
+  current_wo_id varchar(32) [note: 'Lệnh đang chiếm máy. Không phải FK trong spec. Seed: M4 = WO-11 (in_progress); M1 NULL (rảnh)']
+
+  Note: 'M1 UP rảnh (WO-01). M2 DOWN (WO-04). M3 MAINTENANCE (WO-05). M4 UP chiếm bởi WO-11.'
+}
+
+Table labor {
+  shift_id varchar(32) [pk, note: 'Mã ca. Ví dụ mô phỏng S1']
+  machine_id varchar(32) [pk, not null, ref: > machines.machine_id, note: 'Máy được bố trí']
+  skill varchar(32) [pk, note: 'Kỹ năng. Ví dụ mô phỏng asm, weld']
+  required_headcount int [not null, note: 'CHECK (required_headcount > 0). Cổng 3']
+  assigned_headcount int [not null, default: 0, note: 'CHECK (assigned_headcount >= 0). Cổng 3 đạt khi >= required_headcount']
+
+  Note: 'Khóa chính (shift_id, machine_id, skill).'
+}
+
+Table work_orders {
+  wo_id varchar(32) [pk, note: 'Mã lệnh. Ví dụ mô phỏng WO-01 .. WO-13']
+  sku varchar(32) [not null, ref: > sku_master.sku, note: 'Mã SKU sản xuất']
+  qty_target int [not null, note: 'CHECK (qty_target > 0)']
+  qty_good int [not null, default: 0, note: 'CHECK (qty_good >= 0). Seed WO-11 = 40/60']
+  bom_rev varchar(8) [not null, note: 'Phiên bản BOM của lệnh. Cổng 4 phải trùng sku_master.current_bom_rev']
+  machine_id varchar(32) [not null, ref: > machines.machine_id, note: 'Máy được phân công. WO-11 gán M4']
+  shift_id varchar(32) [not null, note: 'Ca dự kiến. Không phải FK vì khóa labor là bộ ba']
+  priority varchar(16) [not null, note: 'CHECK (priority IN (LOW, NORMAL, HIGH, URGENT))']
+  state varchar(24) [not null, note: 'CHECK IN (created, not_ready, released, in_progress, blocked, done, cancelled). Không có pending_confirm']
+  due_time timestamp [not null, note: 'Hạn hoàn thành. Dùng để cờ LATE, tách với cổng sẵn sàng']
+  note text [note: 'Ghi chú hiện trường. Seed WO-12 chứa câu injection mô phỏng']
+  predecessor_wo_id varchar(32) [ref: > work_orders.wo_id, note: '[Đề xuất – nhóm chưa chốt] Self-FK, nullable. Schema research 06 chưa có. NULL = Cổng 5 N/A. Có giá trị thì tiền nhiệm phải state = done. Seed WO-13 trỏ WO-10']
+
+  Note: 'Vòng đời lệnh. Badge Chờ duyệt không đổi state.'
+}
+
+Table wo_materials {
+  wo_id varchar(32) [pk, not null, ref: > work_orders.wo_id, note: 'Mã lệnh sản xuất']
+  material_code varchar(32) [pk, not null, ref: > materials.material_code, note: 'Mã vật tư tiêu hao']
+  qty_required int [not null, note: 'CHECK (qty_required > 0)']
+  critical boolean [not null, default: true, note: 'TRUE thì bắt buộc đủ tồn khả dụng và không QC hold (Cổng 1)']
+
+  Note: 'Định mức tiêu hao. Khóa chính (wo_id, material_code).'
+}
+
+Table hitl_requests {
+  id int [pk, increment, note: 'SERIAL. Khóa chính tự tăng']
+  wo_id varchar(32) [not null, ref: > work_orders.wo_id, note: 'Mã lệnh liên quan']
+  action varchar(24) [not null, note: 'CHECK IN (RELEASE, CANCEL, CHANGE_PRIORITY)']
+  from_state varchar(24) [not null, note: 'Trạng thái lệnh lúc tạo phiếu']
+  payload jsonb [not null, default: '{}', note: 'Dữ liệu kèm theo yêu cầu']
+  status varchar(16) [not null, note: 'CHECK IN (pending, approved, rejected). pending không ghi pending_confirm lên lệnh']
+  evidence_json jsonb [note: 'Snapshot 5 cổng lúc đề xuất']
+  reason text [note: 'Giải trình tiếng Việt']
+  proposed_by varchar(64) [not null, default: 'ai_agent', note: 'Người hoặc hệ thống đề xuất']
+  decided_by varchar(64) [note: 'Điều độ viên ký duyệt hoặc từ chối']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'Thời điểm mở phiếu']
+  decided_at timestamp [note: 'Thời điểm ra quyết định']
+
+  Note: 'Phiếu HITL tách bảng. AI không có tool phát lệnh. Từ chối CANCEL không tụt state lệnh.'
+}
+
+Table events {
+  id int [pk, increment, note: 'SERIAL. Khóa chính tự tăng']
+  wo_id varchar(32) [not null, ref: > work_orders.wo_id, note: 'Mã lệnh chịu tác động']
+  actor varchar(64) [not null, note: 'Danh tính người thực hiện']
+  role varchar(24) [not null, note: 'CHECK IN (dispatcher, line_lead, system, ai_agent)']
+  type varchar(32) [not null, note: 'Ví dụ ORDER_RELEASED, ORDER_STARTED, PROGRESS_REPORTED, ORDER_BLOCKED, STALE_APPROVE_BLOCKED']
+  from_state varchar(24) [note: 'Trạng thái trước biến đổi']
+  to_state varchar(24) [note: 'Trạng thái sau biến đổi']
+  payload jsonb [note: 'Chi tiết bổ sung']
+  ts timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'Dấu thời gian sự kiện']
+
+  Note: 'Nhật ký kiểm toán US-09.'
+}
+
+Table sop_documents {
+  sop_id varchar(32) [pk, note: 'Mã SOP. Ví dụ mô phỏng SOP-M01']
+  title varchar(128) [not null, note: 'Tiêu đề hướng dẫn vận hành']
+  category varchar(32) [not null, note: 'Phân nhóm quy trình']
+  target_sku_or_process varchar(64) [not null, note: 'Phạm vi áp dụng dạng chữ. Không phải FK tới sku_master']
+  effective_rev varchar(8) [not null, note: 'Phiên bản quy chuẩn có hiệu lực']
+  excerpt text [not null, note: 'Trích đoạn cốt lõi cho tra cứu mỏng']
+  last_updated timestamp [not null, note: 'Thời điểm sửa đổi lần cuối']
+
+  Note: 'Năm tài liệu SOP giả. Quan hệ ERD với sku_master là logic, không có cột khóa ngoại.'
+}

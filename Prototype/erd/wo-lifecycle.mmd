@@ -1,0 +1,43 @@
+%% Vòng đời work_orders.state (02-ERD-spec mục 3).
+%% Không có state pending_confirm. Phiếu HITL là bảng hitl_requests
+%% (status: pending | approved | rejected), không phải một state của lệnh.
+%% Duyệt pass mới tăng materials.reserved: [Quyết định nhóm đang chờ chốt].
+%% Duyệt fail/stale: giữ created, không tăng reserved.
+%% Từ chối phiếu CANCEL (WO-12): lệnh vẫn released.
+
+stateDiagram-v2
+    [*] --> created: Khởi tạo lệnh (Kế hoạch)
+
+    created --> not_ready: Cổng kiểm tra thất bại
+    not_ready --> created: Cổng kiểm tra lại đạt đủ
+
+    created --> released: Điều độ viên bấm Duyệt (Approve)<br/>Re-check 5 cổng PASS và tăng reserved<br/>[Quyết định nhóm đang chờ chốt]
+
+    released --> in_progress: Tổ trưởng bấm Bắt đầu (Start)
+    in_progress --> in_progress: Tổ trưởng nhập sản lượng (Progress)
+    in_progress --> done: Sản lượng đạt đủ định mức
+
+    released --> blocked: Tổ trưởng báo sự cố / tắc chuyền
+    in_progress --> blocked: Máy hỏng / thiếu hàng bất ngờ
+
+    blocked --> in_progress: Sự cố được khắc phục xong
+
+    created --> cancelled: Điều độ viên hủy lệnh qua phiếu HITL
+    released --> cancelled: Hủy lệnh khẩn cấp qua phiếu HITL
+    blocked --> cancelled: Hủy lệnh do không thể khắc phục
+
+    done --> [*]
+    cancelled --> [*]
+
+    note right of created
+        Không ghi pending_confirm.
+        Phiếu chờ duyệt là hitl_requests.status = pending.
+        Badge Chờ duyệt nằm trên thẻ cột Chưa phát.
+        Duyệt stale: giữ created, không tăng reserved.
+    end note
+
+    note right of released
+        Tăng reserved chỉ khi Duyệt pass.
+        Từ chối phiếu CANCEL không đổi state.
+        Ví dụ WO-12 vẫn released.
+    end note

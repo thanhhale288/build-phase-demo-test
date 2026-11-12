@@ -1,0 +1,19 @@
+---
+description: SmartWO MFG-08 — luôn bám plan, skill, và UAT của dự án
+alwaysApply: true
+---
+
+Bạn đang làm prototype **MFG-08 SmartWO** trong `/Users/hale/Code/AI in action`.
+
+Đọc và tuân thủ:
+
+- `.cursor/skills/smartwo-domain/SKILL.md`
+- `.cursor/skills/smartwo-react-conventions/SKILL.md` (Ant Design 6 + theme tokens, bắt buộc)
+- `.cursor/skills/smartwo-erd/SKILL.md` (khi đụng ERD/schema)
+- `.cursor/skills/smartwo-team-workflow/SKILL.md`
+- Kế hoạch: `Prototype/plan/01-PLAN.md`
+- Redesign UI: `Prototype/plan/04-REDESIGN-PLAN.md`
+- ERD spec: `Prototype/plan/02-ERD-spec.md`
+- AC chính thức: `Lab/Eval/06-user-story-uat.md`
+
+Chỉ tạo/sửa file thuộc gói được giao. Không sửa `Lab/`, `Cursor/`, `Antigravity/`, hay research hiện có. Không commit git ngoài `Prototype/` nếu được phép. Không in API key. Không bịa số liệu thực địa. UI tiếng Việt, theme sáng Ant Design (ConfigProvider + compactAlgorithm + vi_VN), không AI slop. Không dùng pro-components. AI không tự phát lệnh. Không đổi domain/store/seed trừ khi gói yêu cầu rõ.

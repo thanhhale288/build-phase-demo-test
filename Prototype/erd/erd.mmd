@@ -1,0 +1,109 @@
+%% MFG-08 SmartWO — ERD mô phỏng (02-ERD-spec, 9 bảng)
+%% Tên thực thể = bảng SQL viết hoa. Không bịa cột ngoài spec.
+%% work_orders.state không có pending_confirm. Phiếu chờ duyệt = hitl_requests.status.
+%% predecessor_wo_id: [Đề xuất – nhóm chưa chốt] (schema research 06 chưa có).
+%% materials.reserved tăng lúc Duyệt thành công: [Quyết định nhóm đang chờ chốt].
+%% Seed máy mô phỏng: M1 UP rảnh; M2 DOWN; M3 MAINTENANCE; M4 UP, current_wo_id = WO-11.
+%% SOP_DOCUMENTS không có cột FK tới sku_master. Quan hệ dưới đây là logic
+%% qua target_sku_or_process, đúng sơ đồ mục 1 của 02-ERD-spec.
+%% machines.current_wo_id không khai báo FK (spec mục 2.3).
+
+erDiagram
+    SKU_MASTER ||--o{ WORK_ORDERS : "áp dụng cho"
+    MACHINES ||--o{ WORK_ORDERS : "thực thi trên"
+    MACHINES ||--o{ LABOR : "bố trí vận hành"
+    WORK_ORDERS ||--o{ WO_MATERIALS : "định mức tiêu hao"
+    MATERIALS ||--o{ WO_MATERIALS : "cung cấp"
+    WORK_ORDERS ||--o{ WORK_ORDERS : "lệnh tiền nhiệm [Đề xuất]"
+    WORK_ORDERS ||--o{ HITL_REQUESTS : "phát sinh yêu cầu phê duyệt"
+    WORK_ORDERS ||--o{ EVENTS : "ghi nhận sự kiện vòng đời"
+    SKU_MASTER ||--o{ SOP_DOCUMENTS : "hướng dẫn kỹ thuật liên quan"
+
+    SKU_MASTER {
+        varchar sku PK "VARCHAR(32). Mã sản phẩm / SKU"
+        varchar name "VARCHAR(128). Tên sản phẩm mô phỏng"
+        varchar current_bom_rev "VARCHAR(8). Phiên bản BOM hiện hành"
+    }
+
+    MATERIALS {
+        varchar material_code PK "VARCHAR(32). Mã vật tư / linh kiện"
+        varchar name "VARCHAR(128). Tên vật tư"
+        int on_hand "Tồn kho vật lý. CHECK >= 0"
+        int reserved "Giữ chỗ. CHECK >= 0. Tăng lúc Duyệt [Chờ chốt]"
+        boolean qc_hold "Cờ giữ thẩm định chất lượng"
+        varchar unit "VARCHAR(16). Đơn vị tính (cái, bộ)"
+    }
+
+    MACHINES {
+        varchar machine_id PK "VARCHAR(32). Mã máy M1-M4"
+        varchar name "VARCHAR(64). Tên thiết bị / bàn gá"
+        varchar status "VARCHAR(16). UP, DOWN, MAINTENANCE"
+        varchar current_wo_id "VARCHAR(32) null. Seed M4 = WO-11"
+    }
+
+    LABOR {
+        varchar shift_id PK "VARCHAR(32). Mã ca (VD: S1)"
+        varchar machine_id PK,FK "VARCHAR(32). Mã máy bố trí"
+        varchar skill PK "VARCHAR(32). Kỹ năng (asm, weld)"
+        int required_headcount "Định biên yêu cầu. CHECK > 0"
+        int assigned_headcount "Có mặt trong ca. CHECK >= 0"
+    }
+
+    WORK_ORDERS {
+        varchar wo_id PK "VARCHAR(32). Mã lệnh (VD: WO-01)"
+        varchar sku FK "VARCHAR(32). Mã SKU sản xuất"
+        int qty_target "Sản lượng kế hoạch. CHECK > 0"
+        int qty_good "Sản lượng đạt. CHECK >= 0"
+        varchar bom_rev "VARCHAR(8). Phiên bản BOM của lệnh"
+        varchar machine_id FK "VARCHAR(32). Máy được phân công"
+        varchar shift_id "VARCHAR(32). Ca sản xuất dự kiến"
+        varchar priority "VARCHAR(16). LOW, NORMAL, HIGH, URGENT"
+        varchar state "VARCHAR(24). Không có pending_confirm"
+        timestamp due_time "Thời hạn hoàn thành kế hoạch"
+        text note "Ghi chú hiện trường"
+        varchar predecessor_wo_id FK "VARCHAR(32) null. [Đề xuất – nhóm chưa chốt]"
+    }
+
+    WO_MATERIALS {
+        varchar wo_id PK,FK "VARCHAR(32). Mã lệnh sản xuất"
+        varchar material_code PK,FK "VARCHAR(32). Mã vật tư tiêu hao"
+        int qty_required "Định mức cần dùng. CHECK > 0"
+        boolean critical "Vật tư then chốt (bắt buộc Cổng 1)"
+    }
+
+    HITL_REQUESTS {
+        serial id PK "Khóa chính tự tăng"
+        varchar wo_id FK "VARCHAR(32). Mã lệnh liên quan"
+        varchar action "VARCHAR(24). RELEASE, CANCEL, CHANGE_PRIORITY"
+        varchar from_state "VARCHAR(24). Trạng thái lệnh lúc tạo phiếu"
+        jsonb payload "Dữ liệu kèm theo yêu cầu"
+        varchar status "VARCHAR(16). pending, approved, rejected"
+        jsonb evidence_json "Dữ liệu bằng chứng 5 cổng"
+        text reason "Giải trình của AI hoặc người tạo"
+        varchar proposed_by "VARCHAR(64). Người / hệ thống đề xuất"
+        varchar decided_by "VARCHAR(64). Người phê duyệt"
+        timestamp created_at "Thời điểm mở phiếu"
+        timestamp decided_at "Thời điểm ra quyết định"
+    }
+
+    EVENTS {
+        serial id PK "Khóa chính tự tăng"
+        varchar wo_id FK "VARCHAR(32). Mã lệnh liên quan"
+        varchar actor "VARCHAR(64). Người / tác nhân thao tác"
+        varchar role "VARCHAR(24). dispatcher, line_lead, system, ai_agent"
+        varchar type "VARCHAR(32). ORDER_RELEASED, START, ..."
+        varchar from_state "VARCHAR(24). Trạng thái trước biến đổi"
+        varchar to_state "VARCHAR(24). Trạng thái sau biến đổi"
+        jsonb payload "Chi tiết bổ sung của sự kiện"
+        timestamp ts "Dấu thời gian chính xác"
+    }
+
+    SOP_DOCUMENTS {
+        varchar sop_id PK "VARCHAR(32). Mã SOP (VD: SOP-M01)"
+        varchar title "VARCHAR(128). Tiêu đề quy trình nghiệp vụ"
+        varchar category "VARCHAR(32). material, machine, quality, ..."
+        varchar target_sku_or_process "VARCHAR(64). Phạm vi áp dụng, không phải FK"
+        varchar effective_rev "VARCHAR(8). Phiên bản hiệu lực"
+        text excerpt "Nội dung trích đoạn cốt lõi"
+        timestamp last_updated "Thời điểm cập nhật văn bản"
+    }
