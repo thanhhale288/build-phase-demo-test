@@ -1,5 +1,5 @@
+import { List, Tag, Typography } from 'antd'
 import type { SopCitation } from '../../domain/types.ts'
-import styles from './agent.module.css'
 
 export type ChatTurn = {
   id: string
@@ -9,20 +9,35 @@ export type ChatTurn = {
   denied?: boolean
 }
 
-export function ChatHistory({ turns }: { turns: ChatTurn[] }) {
+type ChatHistoryProps = {
+  turns: ChatTurn[]
+  onOpenCitation?: (citation: SopCitation) => void
+}
+
+export function ChatHistory({ turns, onOpenCitation }: ChatHistoryProps) {
+  if (turns.length === 0) {
+    return <Typography.Text type="secondary">Chưa có trao đổi trong phiên này.</Typography.Text>
+  }
   return (
-    <div className={styles.history}>
-      {turns.map((turn) => (
-        <div key={turn.id} className={turn.role === 'user' ? `${styles.bubble} ${styles.bubbleUser}` : styles.bubble}>
-          <strong>{turn.role === 'user' ? 'Bạn' : 'Trợ lý điều độ'}</strong>
-          <p className={turn.denied ? styles.deny : undefined}>{turn.text}</p>
+    <List
+      size="small"
+      dataSource={turns}
+      renderItem={(turn) => (
+        <List.Item style={{ display: 'block' }}>
+          <Typography.Text strong>{turn.role === 'user' ? 'Bạn' : 'Trợ lý điều độ'}</Typography.Text>
+          <Typography.Paragraph
+            style={{ marginTop: 4, marginBottom: 4 }}
+            type={turn.denied ? 'danger' : undefined}
+          >
+            {turn.text}
+          </Typography.Paragraph>
           {turn.citations?.map((c) => (
-            <p key={c.sop_id} className={styles.cite}>
-              {c.sop_id} — {c.title}: {c.excerpt}
-            </p>
+            <Tag key={c.sop_id} style={{ cursor: 'pointer' }} onClick={() => onOpenCitation?.(c)}>
+              {c.sop_id} — {c.title}
+            </Tag>
           ))}
-        </div>
-      ))}
-    </div>
+        </List.Item>
+      )}
+    />
   )
 }

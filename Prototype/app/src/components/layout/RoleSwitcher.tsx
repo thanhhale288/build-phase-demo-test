@@ -1,17 +1,22 @@
+import { Segmented } from 'antd'
 import { useAppStore } from '../../store/useAppStore.ts'
-import styles from './layout.module.css'
+import type { Role } from '../../domain/types.ts'
 
-export function RoleSwitcher() {
+type RoleSwitcherProps = { block?: boolean }
+
+export function RoleSwitcher({ block }: RoleSwitcherProps) {
   const role = useAppStore((s) => s.role)
   const setRole = useAppStore((s) => s.setRole)
   return (
-    <div className={styles.role} role="group" aria-label="Chuyển vai">
-      <button type="button" className={role === 'dispatcher' ? styles.on : undefined} onClick={() => setRole('dispatcher')}>
-        Điều độ viên
-      </button>
-      <button type="button" className={role === 'line_lead' ? styles.on : undefined} onClick={() => setRole('line_lead')}>
-        Tổ trưởng chuyền
-      </button>
-    </div>
+    <Segmented<Role>
+      aria-label="Chuyển vai"
+      block={block}
+      value={role}
+      onChange={(value) => setRole(value)}
+      options={[
+        { label: 'Điều độ viên', value: 'dispatcher' },
+        { label: 'Tổ trưởng chuyền', value: 'line_lead' },
+      ]}
+    />
   )
 }

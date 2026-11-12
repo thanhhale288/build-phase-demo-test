@@ -1,5 +1,5 @@
+import { Card, Progress, Space, Tag, Tooltip, Typography } from 'antd'
 import type { GateId, GateResult, ReadinessResult, WorkOrder } from '../../domain/types.ts'
-import styles from './kanban.module.css'
 
 const GATE_ORDER: { id: GateId; title: string }[] = [
   { id: 'material', title: 'Vật tư' },
@@ -17,6 +17,16 @@ const STATE_VI: Record<string, string> = {
   blocked: 'Tắc',
   done: 'Xong',
   cancelled: 'Đã hủy',
+}
+
+const STATE_COLOR: Record<string, string> = {
+  created: 'default',
+  not_ready: 'default',
+  released: 'blue',
+  in_progress: 'processing',
+  blocked: 'error',
+  done: 'success',
+  cancelled: 'default',
 }
 
 export function stateLabel(state: string): string {
@@ -43,14 +53,7 @@ function gateOf(gates: GateResult[], id: GateId): GateResult | undefined {
   return gates.find((gate) => gate.id === id)
 }
 
-function dotClass(gate: GateResult | undefined): string {
-  if (!gate) return styles.dot
-  if (gate.notApplicable) return `${styles.dot} ${styles.dotNa}`
-  if (gate.pass) return `${styles.dot} ${styles.dotPass}`
-  return `${styles.dot} ${styles.dotFail}`
-}
-
-function dotStatus(gate: GateResult | undefined): string {
+function gateStatus(gate: GateResult | undefined): string {
   if (!gate) return 'Chưa có số liệu'
   if (gate.notApplicable) return 'Không áp dụng'
   return gate.pass ? 'Đạt' : 'Không đạt'
@@ -68,62 +71,66 @@ export function WorkOrderCard({ wo, readiness, pending, active, onSelect }: Work
   const stuck = GATE_ORDER.map((spec) => gateOf(readiness.gates, spec.id)).find(
     (gate) => gate != null && !gate.pass && !gate.notApplicable,
   )
-  const stuckTitle = stuck
-    ? GATE_ORDER.find((spec) => spec.id === stuck.id)?.title
-    : undefined
+  const stuckTitle = stuck ? GATE_ORDER.find((spec) => spec.id === stuck.id)?.title : undefined
+  const percent = wo.qty_target > 0 ? Math.round((wo.qty_good / wo.qty_target) * 100) : 0
 
   return (
-    <button
-      type="button"
-      className={active ? `${styles.card} ${styles.cardActive}` : styles.card}
+    <Card
+      size="small"
+      hoverable
       onClick={onSelect}
       aria-current={active ? 'true' : undefined}
-      aria-haspopup="dialog"
       data-wo-id={wo.wo_id}
       data-state={wo.state}
       data-ready={readiness.overallReady ? 'true' : 'false'}
       data-late={readiness.late ? 'true' : 'false'}
       data-pending={pending ? 'true' : 'false'}
+      style={{
+        borderColor: active ? '#1668DC' : undefined,
+        boxShadow: active ? '0 0 0 1px #1668DC' : undefined,
+        cursor: 'pointer',
+      }}
+      styles={{ body: { padding: 10 } }}
     >
-      <span className={styles.cardTop}>
-        <span className={styles.woId}>{wo.wo_id}</span>
-        <span className={styles.stateCode}>{wo.state}</span>
-      </span>
-      <span className={styles.metaLine}>
-        {wo.sku} · SL {wo.qty_good}/{wo.qty_target} · {wo.machine_id}
-      </span>
-      <span className={styles.dueLine}>
-        Hạn {formatDue(wo.due_time)}
-      </span>
-      {pending || readiness.late ? (
-        <span className={styles.flags}>
-          {pending ? <span className={styles.badgePending}>[Chờ duyệt]</span> : null}
-          {readiness.late ? (
-            <span className={styles.flagLate} title="Quá hạn. Tách với kết quả cổng.">
-              [LATE]
-            </span>
-          ) : null}
-        </span>
-      ) : null}
-      <span className={styles.dots} aria-hidden="true">
+      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+        <Typography.Text strong>{wo.wo_id}</Typography.Text>
+        <Tag style={{ marginInlineEnd: 0 }} color={STATE_COLOR[wo.state]}>
+          {wo.state}
+        </Tag>
+      </Space>
+      <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
+        {wo.sku} · {wo.machine_id} · Hạn {formatDue(wo.due_time)}
+      </Typography.Text>
+      <Typography.Text type="secondary" style={{ display: 'block', marginTop: 6 }}>
+        SL {wo.qty_good}/{wo.qty_target}
+      </Typography.Text>
+      <Progress
+        percent={percent}
+        size="small"
+        showInfo={false}
+        style={{ margin: '4px 0 6px' }}
+      />
+      <Space size={4} wrap>
+        {pending ? <Tag color="gold">[Chờ duyệt]</Tag> : null}
+        {readiness.late ? <Tag color="red">[LATE]</Tag> : null}
         {GATE_ORDER.map((spec) => {
           const gate = gateOf(readiness.gates, spec.id)
+          const color = !gate || gate.notApplicable ? 'default' : gate.pass ? 'success' : 'error'
+          const mark = !gate || gate.notApplicable ? '—' : gate.pass ? '●' : '●'
           return (
-            <span
-              key={spec.id}
-              className={dotClass(gate)}
-              title={`${spec.title}: ${dotStatus(gate)}`}
-            />
+            <Tooltip key={spec.id} title={`${spec.title}: ${gateStatus(gate)}`}>
+              <Tag color={color} style={{ marginInlineEnd: 0, minWidth: 22, textAlign: 'center' }}>
+                {mark}
+              </Tag>
+            </Tooltip>
           )
         })}
-      </span>
-      <span className={styles.srOnly}>
-        {GATE_ORDER.map((spec) => {
-          const gate = gateOf(readiness.gates, spec.id)
-          return `${spec.title} ${dotStatus(gate)}`
-        }).join('. ')}
-      </span>
-      {stuckTitle ? <span className={styles.stuckLine}>Bị kẹt cổng: {stuckTitle}</span> : null}
-    </button>
+      </Space>
+      {stuckTitle ? (
+        <Typography.Text type="danger" style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
+          Bị kẹt cổng: {stuckTitle}
+        </Typography.Text>
+      ) : null}
+    </Card>
   )
 }

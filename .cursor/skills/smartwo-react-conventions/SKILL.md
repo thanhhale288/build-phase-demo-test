@@ -80,3 +80,16 @@ Công cụ nội bộ, theme sáng, tiếng Việt xưởng, tiết chế.
 - Tổ trưởng không thấy nút Duyệt/Từ chối; điều độ không thấy Start/qty/block
 - `npm run build` phải pass. UI text = tiếng Việt
 - Không đọc/sửa `node_modules` khi làm việc
+
+## Responsive (bắt buộc)
+
+Dùng `Grid.useBreakpoint()` (hook `src/hooks/useResponsive.ts`).
+
+- `< lg` (992px): ẩn Sider, nút hamburger `MenuOutlined` trên Header mở `Drawer` chứa Menu + `Segmented` vai + Reset Demo
+- `>= lg`: Sider luôn hiện; vai và Reset nằm trên Header
+- Kanban: mobile (`!md`) chọn cột bằng `Segmented`; tablet cuộn ngang `scroll-snap`; desktop 5 cột đều
+- `Statistic` bọc `Col xs={12} md={6}`
+- Drawer chi tiết WO: `width` 100% khi `!md`, 640 khi `md+`
+- Table: `scroll.x` hoặc danh sách Card trên mobile
+- HITL / trợ lý: rail phải trên desktop; `Tabs` phía dưới trên `< lg`
+- Chụp 1440×900, 768×1024, 390×844 (kèm drawer menu mở)

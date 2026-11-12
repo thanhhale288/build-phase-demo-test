@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
+import { Button, Card, Input, Space, Typography } from 'antd'
 import { useAppStore } from '../../store/useAppStore.ts'
-import type { SopDocument } from '../../domain/types.ts'
+import type { SopCitation, SopDocument } from '../../domain/types.ts'
 import { ChatHistory, type ChatTurn } from './ChatHistory.tsx'
 import { QuickSuggestions } from './QuickSuggestions.tsx'
 import { SopViewerModal } from './SopViewerModal.tsx'
-import styles from './agent.module.css'
 
 type AgentDrawerProps = { woId?: string }
 
@@ -13,10 +13,10 @@ export function AgentDrawer({ woId }: AgentDrawerProps) {
   const explainBlocked = useAppStore((s) => s.explainBlocked)
   const proposeRelease = useAppStore((s) => s.proposeRelease)
   const lookupSop = useAppStore((s) => s.lookupSop)
+  const sops = useAppStore((s) => s.sops)
   const [input, setInput] = useState('')
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [sop, setSop] = useState<SopDocument | undefined>()
-  const sops = useAppStore((s) => s.sops)
   const selected = woId ?? 'WO-02'
 
   const intro = useMemo(
@@ -72,48 +72,46 @@ export function AgentDrawer({ woId }: AgentDrawerProps) {
     ])
   }
 
+  function send() {
+    if (!input.trim()) return
+    respond(input)
+    setInput('')
+  }
+
+  function openCitation(citation: SopCitation) {
+    const found = sops.find((doc) => doc.sop_id === citation.sop_id)
+    if (found) setSop(found)
+  }
+
   return (
-    <section className={styles.panel} aria-label="Trợ lý điều độ">
-      <h2 className={styles.title}>Trợ lý điều độ</h2>
-      <p className={styles.hint}>{intro}</p>
-      <ChatHistory turns={turns} />
+    <Card size="small" title="Trợ lý điều độ" aria-label="Trợ lý điều độ">
+      <Typography.Paragraph type="secondary">{intro}</Typography.Paragraph>
+      <div style={{ maxHeight: 240, overflow: 'auto', marginBottom: 8 }}>
+        <ChatHistory turns={turns} onOpenCitation={openCitation} />
+      </div>
       <QuickSuggestions onPick={respond} />
-      <div className={styles.row}>
-        <input
-          className={styles.input}
+      <Space.Compact style={{ width: '100%', marginTop: 12 }}>
+        <Input
           value={input}
           placeholder="Hỏi về lệnh đang mở…"
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && input.trim()) {
-              respond(input)
-              setInput('')
-            }
-          }}
+          onPressEnter={send}
         />
-        <button
-          type="button"
-          className={styles.btnPrimary}
-          onClick={() => {
-            if (!input.trim()) return
-            respond(input)
-            setInput('')
-          }}
-        >
+        <Button type="primary" onClick={send}>
           Gửi
-        </button>
-      </div>
-      <div className={styles.sugs}>
+        </Button>
+      </Space.Compact>
+      <Space wrap size={8} style={{ marginTop: 8 }}>
         {sops.map((doc) => (
-          <button key={doc.sop_id} type="button" className={styles.linkBtn} onClick={() => setSop(doc)}>
+          <Button key={doc.sop_id} type="link" size="small" onClick={() => setSop(doc)}>
             Xem {doc.sop_id}
-          </button>
+          </Button>
         ))}
-        <button type="button" className={styles.linkBtn} onClick={() => respond(`Vì sao ${selected} chưa phát được?`)}>
+        <Button type="link" size="small" onClick={() => respond(`Vì sao ${selected} chưa phát được?`)}>
           Giải thích {selected}
-        </button>
-      </div>
+        </Button>
+      </Space>
       {sop ? <SopViewerModal sop={sop} onClose={() => setSop(undefined)} /> : null}
-    </section>
+    </Card>
   )
 }

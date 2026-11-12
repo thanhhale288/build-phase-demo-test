@@ -1,4 +1,4 @@
-import styles from './agent.module.css'
+import { Button, Space } from 'antd'
 
 const SUGGESTIONS = [
   'Vì sao WO-02 chưa phát được?',
@@ -9,12 +9,12 @@ const SUGGESTIONS = [
 
 export function QuickSuggestions({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className={styles.sugs}>
+    <Space wrap size={8}>
       {SUGGESTIONS.map((text) => (
-        <button key={text} type="button" className={styles.btn} onClick={() => onPick(text)}>
+        <Button key={text} size="small" onClick={() => onPick(text)}>
           {text}
-        </button>
+        </Button>
       ))}
-    </div>
+    </Space>
   )
 }

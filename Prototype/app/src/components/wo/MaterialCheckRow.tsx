@@ -1,32 +1,37 @@
+import { Space, Tag, Typography } from 'antd'
 import type { GateResult } from '../../domain/types.ts'
-import styles from './wo.module.css'
 
 export type MaterialLineView = NonNullable<GateResult['materialLines']>[number]
 
-const TAG_CLASS: Record<MaterialLineView['label'], string> = {
-  'Còn hàng': styles.tagIn,
-  'Dự kiến': styles.tagExpected,
-  'Không có': styles.tagOut,
-  'QC Hold': styles.tagHold,
+const DISPLAY: Record<MaterialLineView['label'], string> = {
+  'Còn hàng': 'Còn hàng',
+  'Dự kiến': 'Sắp về',
+  'Không có': 'Không có',
+  'QC Hold': 'QC Hold',
 }
 
-type MaterialCheckRowProps = {
-  line: MaterialLineView
+const COLOR: Record<MaterialLineView['label'], string> = {
+  'Còn hàng': 'success',
+  'Dự kiến': 'blue',
+  'Không có': 'error',
+  'QC Hold': 'warning',
 }
+
+type MaterialCheckRowProps = { line: MaterialLineView }
 
 export function MaterialCheckRow({ line }: MaterialCheckRowProps) {
-  const tagClass = TAG_CLASS[line.label] ?? styles.tagOut
-
   return (
-    <div className={styles.matRow}>
-      <span className={styles.matCode}>{line.code}</span>
-      <span className={`${styles.tag} ${tagClass}`}>[{line.label}]</span>
-      <span className={styles.matNums}>Cần {line.required}</span>
-      <span className={styles.matNums}>Khả dụng {line.available}</span>
-      <span className={`${styles.matNums} ${styles.muted}`}>
-        Tồn {line.onHand} · Giữ chỗ {line.reserved}
-        {line.qcHold ? ' · QC hold' : ''}
-      </span>
+    <div style={{ marginTop: 6 }}>
+      <Space wrap size={8}>
+        <Typography.Text strong>{line.code}</Typography.Text>
+        <Tag color={COLOR[line.label]}>{DISPLAY[line.label] ?? line.label}</Tag>
+        <Typography.Text>Cần {line.required}</Typography.Text>
+        <Typography.Text>Khả dụng {line.available}</Typography.Text>
+        <Typography.Text type="secondary">
+          Tồn {line.onHand} · Giữ chỗ {line.reserved}
+          {line.qcHold ? ' · QC hold' : ''}
+        </Typography.Text>
+      </Space>
     </div>
   )
 }

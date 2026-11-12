@@ -16,3 +16,9 @@
 - 2026-11-12 23:50:03 Asia/Saigon — Tích hợp xong, npm run build pass. Ảnh headless trong Prototype/screenshots/. README và plan/03-REVIEW.md đã ghi. Preview 4173 sẽ được tắt.\n
 ## Redesign Ant Design (2026-11-12 đêm)
 - 2026-11-12 23:58:32 Asia/Saigon — Bắt đầu agy plan 04-REDESIGN-PLAN.md với gemini-3.8-flash-high. Đã cài antd@6.7.0 + @ant-design/icons@6.3.4. Bỏ pro-components (peer antd 5, không build được với antd 6).
+
+- 2026-11-13 00:02:02 Asia/Saigon — Ghi Prototype/plan/04-REDESIGN-PLAN.md (điều phối, vì agy gemini-3.8-flash-high vẫn stream chưa ghi file sau ~2–3 phút). Skill/rule đã bắt buộc antd. Sắp chạy 5 cursor-agent PKG-R1..R5, model grok-4.7-high; fallback grok-4.7-high-fast → cursor-grok-4.5-high → composer-2.5.
+
+- 2026-11-13 00:07:54 Asia/Saigon — 5 cursor-agent PKG-R1..R5 model grok-4.7-high: R3 exit 1 (Connection lost, RetriableError unavailable sau 3 retry). R1/R2/R4/R5 ~2 phút log 0 byte, chưa ghi src. Đã dừng wrapper và điều phối triển khai UI antd (cùng plan 04).
+
+- 2026-11-13 00:18:07 Asia/Saigon — Redesign antd 6 xong (responsive + hamburger). `npm run build` pass, vite base '/'. Ảnh 1440/768/390 trong Prototype/screenshots2/. cursor-agent R1–R5: R3 mất kết nối, các gói còn lại không ghi file; điều phối implement theo plan 04. agy 04-plan: phiên stream chưa kịp ghi file, điều phối viết plan rồi code.
